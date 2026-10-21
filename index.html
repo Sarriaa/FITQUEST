@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -264,7 +265,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .sl{font-size:12px;color:var(--mu);margin-bottom:3px}.sv{font-size:20px;font-weight:600;letter-spacing:-.2px;font-variant-numeric:tabular-nums}
 .sach{text-align:right}.sach .sv{display:flex;align-items:center;justify-content:flex-end;gap:5px;color:#ffd60a}.sach svg{width:19px;height:19px}
 .smapw{position:relative;margin-top:16px;height:240px;border-radius:14px;overflow:hidden;background:linear-gradient(160deg,rgba(111,147,176,.18),rgba(212,80,111,.10))}
-.smapw>svg.rs{position:absolute;inset:0;width:100%;height:100%}.smap{position:absolute;inset:0;background:transparent;opacity:0;transition:opacity .5s}.smapw.tiles .smap{opacity:1}
+.smapw>svg.rs{position:absolute;inset:0;width:100%;height:100%;z-index:1}.smap{position:absolute;inset:0;z-index:2;background:transparent;opacity:0;transition:opacity .6s}.smap.leaflet-container{background:transparent}.smapw.tiles .smap{opacity:1}.smap .leaflet-tile-pane{filter:invert(90%) hue-rotate(185deg) brightness(95%) contrast(90%)}
 .smapw .att{position:absolute;right:8px;bottom:6px;font-size:10px;color:#fff;opacity:.6;z-index:500;text-shadow:0 1px 2px #000}
 @media (max-width:560px){.smapw{height:210px}.scard-top{grid-template-columns:1fr}.sleft{flex-direction:row;justify-content:flex-start;gap:12px;margin-bottom:10px}.sleft .av{margin-bottom:0}.sitem{padding-right:13px;margin-right:13px}.sv{font-size:18px}}
 .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
@@ -454,7 +455,13 @@ function fig(pat,wt,n){const x=XM[n],eq=x?x.eq:(wt?"bb":"bw"),[A,B]=P[pat]||P.sq
  <circle class="hd" r="9" cx="${A[0]}" cy="${A[1]}">${an("cx",A[0],B[0])}${an("cy",A[1],B[1])}</circle>
  ${pl("arm",A[2]+","+A[3]+" "+pts(A,6,9),B[2]+","+B[3]+" "+pts(B,6,9))}${pr.im}</svg>`}
 const kgTot=s=>{let t=0;Object.values(s.done||{}).forEach(d=>Object.values(d).forEach(x=>t+=x.kg||0));return t};
-function runAgg(){let n=0,km=0,lg=0,lgD="",best=0,bestD="";const wk={};Object.entries(S.runs||{}).forEach(([k,r])=>{if(!r||!(r.km>0||r.min>0))return;n++;km+=r.km||0;if((r.km||0)>lg){lg=r.km;lgD=k}if(r.km>=3&&r.min>0){const q=r.min/r.km;if(!best||q<best){best=q;bestD=k}}if(r.km>0){const w=ds(mondayOf(at(k)));wk[w]=(wk[w]||0)+r.km}});return{n,km,lg,lgD,best,bestD,wk:Math.max(0,...Object.values(wk))}}
+function runAgg(){let n=0,km=0,lg=0,lgD="",best=0,bestD="";const wk={};Object.entries(S.runs||{}).forEach(([k,r])=>{if(!r||!(r.km>0||r.min>0))return;n++;km+=r.km||0;if((r.km||0)>lg){lg=r.km;lgD=k}if(r.km>=3&&r.min>0){const q=r.min/r.km;if(!best||q<best){best=q;bestD=k}}if(r.km>0){const w=ds(mondayOf(at(k)));wk[w]=(wk[w]||0)+r.km}});const ks=Object.keys(wk).sort();let cw=ks.length?1:0,cur=1;for(let i=1;i<ks.length;i++){cur=Math.round((at(ks[i])-at(ks[i-1]))/6048e5)===1?cur+1:1;cw=Math.max(cw,cur)}
+ return{n,km,lg,lgD,best,bestD,cw,wk:Math.max(0,...Object.values(wk))}}
+const habDays=s=>{const H=s.habits||[];return H.length?Object.values(s.hlog||{}).filter(l=>l&&H.every(h=>l[h.id])).length:0};
+const foodDays=s=>Object.values(s.food||{}).filter(a=>a&&a.length).length;
+const repsTot=s=>{let t=0;Object.values(s.done||{}).forEach(d=>Object.values(d).forEach(x=>t+=x.reps||0));return t};
+const maxRm=s=>{let m=0;Object.values(s.hist||{}).forEach(h=>h.forEach(e=>{if(e.rm>m)m=e.rm}));return m};
+const swimM=s=>Object.values(s.swims||{}).reduce((a,r)=>a+(r.m||0),0);
 const BADGES=[
 ["🔥","Primera sesión",s=>s.workouts>=1,"Completa tu primer entreno","g"],
 ["📅","Racha de 3 días",s=>streak(s)>=3,"3 días seguidos sin fallar","g"],
@@ -477,7 +484,35 @@ const BADGES=[
 ["🚀","250 km acumulados",s=>runAgg().km>=250,"Suma 250 km corriendo","r"],
 ["⚡","Ritmo sub 5:30",s=>{const b=runAgg().best;return b>0&&b<5.5},"Corre ≥3 km a menos de 5:30/km","r"],
 ["🔥","Ritmo sub 5:00",s=>{const b=runAgg().best;return b>0&&b<5},"Corre ≥3 km a menos de 5:00/km","r"],
-["📈","Semana de 30 km",s=>runAgg().wk>=30,"Suma 30 km en una semana","r"]];
+["📈","Semana de 30 km",s=>runAgg().wk>=30,"Suma 30 km en una semana","r"],
+["🌙","Racha de 14 días",s=>streak(s)>=14,"14 días seguidos sin fallar","g"],
+["💎","60 días sin fallar",s=>streak(s)>=60,"Dos meses sin fallar","g"],
+["👑","100 sesiones",s=>s.workouts>=100,"Completa 100 sesiones","g"],
+["✅","Hábitos al 100 %",s=>habDays(s)>=1,"Completa todos tus hábitos en un día","g"],
+["🔁","7 días de hábitos",s=>habDays(s)>=7,"7 días con todos los hábitos hechos","g"],
+["👟","7 metas de pasos",s=>!!s.sg&&stepStats().days>=7,"Cumple tu meta de pasos 7 días","g"],
+["🚶","30 metas de pasos",s=>!!s.sg&&stepStats().days>=30,"Cumple tu meta de pasos 30 días","g"],
+["🥗","7 días de comida",s=>foodDays(s)>=7,"Registra tu comida 7 días","g"],
+["⚖️","10 pesadas",s=>(s.wlog||[]).length>=10,"Registra 10 pesadas","g"],
+["🏅","5 récords (PR)",s=>(s.prc||0)>=5,"Bate 5 marcas personales","f"],
+["🎖️","15 récords (PR)",s=>(s.prc||0)>=15,"Bate 15 marcas personales","f"],
+["🌟","15 sesiones perfectas",s=>s.perfect>=15,"15 días con todo cumplido","f"],
+["🏋️","50 toneladas",s=>kgTot(s)>=5e4,"Levanta 50.000 kg en total","f"],
+["🏗️","100 toneladas",s=>kgTot(s)>=1e5,"Levanta 100.000 kg en total","f"],
+["🔩","1.000 repeticiones",s=>repsTot(s)>=1000,"Suma 1.000 repeticiones","f"],
+["💯","1RM de 100 kg",s=>maxRm(s)>=100,"Alcanza un 1RM estimado de 100 kg","f"],
+["🏃","10 carreras",s=>runAgg().n>=10,"Registra 10 carreras","r"],
+["👟","25 carreras",s=>runAgg().n>=25,"Registra 25 carreras","r"],
+["🎯","Tirada de 15 km",s=>runAgg().lg>=15,"Corre 15 km de una vez","r"],
+["🏁","Maratón",s=>runAgg().lg>=42.2,"Corre 42,2 km de una vez","r"],
+["🌎","500 km acumulados",s=>runAgg().km>=500,"Suma 500 km corriendo","r"],
+["⚡","Ritmo sub 6:00",s=>{const b=runAgg().best;return b>0&&b<6},"Corre ≥3 km a menos de 6:00/km","r"],
+["💨","Ritmo sub 4:30",s=>{const b=runAgg().best;return b>0&&b<4.5},"Corre ≥3 km a menos de 4:30/km","r"],
+["🗻","Semana de 50 km",s=>runAgg().wk>=50,"Suma 50 km en una semana","r"],
+["📆","4 semanas corriendo",s=>runAgg().cw>=4,"Corre al menos una vez 4 semanas seguidas","r"],
+["🗓️","8 semanas corriendo",s=>runAgg().cw>=8,"Corre al menos una vez 8 semanas seguidas","r"],
+["🏊","Primera piscina",s=>Object.keys(s.swims||{}).length>=1,"Registra tu primera sesión de natación","p"],
+["🌊","5.000 m nadados",s=>swimM(s)>=5000,"Suma 5.000 metros nadados","p"]];
 function awardCheck(){const nb=[];S.badges=S.badges||[];BADGES.forEach(([ic,nm,f])=>{try{if(!S.badges.includes(nm)&&f(S)){S.badges.push(nm);nb.push(ic+" "+nm)}}catch(e){}});return nb}
 function runAch(had){const a=runAgg(),pr=S.rrec,m=[];
  if(pr){if(a.best&&pr.best&&a.best<pr.best-1e-6)m.push("⚡ Ritmo récord: "+pf(a.best)+"/km");if(a.lg>(pr.lg||0)+1e-6)m.push("🛣️ Tirada más larga: "+a.lg+" km");if(a.wk>(pr.wk||0)+1e-6)m.push("📈 Semana récord: "+a.wk.toFixed(1)+" km")}
@@ -507,7 +542,7 @@ function streak(s){ // los fines de semana no rompen la racha
  let n=0,d=new Date();
  const ok=x=>(s.days||[]).includes(ds(x));
  if(isTr(d)&&!ok(d))d.setDate(d.getDate()-1);
- for(let i=0;i<400;i++){if(!isTr(d)){d.setDate(d.getDate()-1);continue}if(!ok(d))break;n++;d.setDate(d.getDate()-1)}
+ for(let i=0;i<400;i++){if(!isTr(d)){if(ok(d))n++;d.setDate(d.getDate()-1);continue}if(!ok(d))break;n++;d.setDate(d.getDate()-1)}
  return n;
 }
 
@@ -563,9 +598,9 @@ function editLog(i){const res=(S.done[SEL]||{})[i];if(!res)return;
   if(res.pre&&n&&S.pg[n]){S.pg[n].w=res.pre.w;S.pg[n].reps=res.pre.reps}
   if(res.pr&&S.prc>0)S.prc--;
   if(n&&S.hist[n]){const ix=S.hist[n].findIndex(x=>x.d===SEL);if(ix>=0){if(res.hp==null)S.hist[n].splice(ix,1);else{S.hist[n][ix].w=res.hp;if(res.hr>0)S.hist[n][ix].rm=res.hr;else delete S.hist[n][ix].rm}}}
-  if(S.days.includes(SEL)){if(Object.values(S.done[SEL]).every(x=>x.ok)&&S.perfect>0)S.perfect--;S.days=S.days.filter(d=>d!==SEL);S.workouts=Math.max(0,S.workouts-1)}
+  if(S.days.includes(SEL)&&full(SEL)){if(Object.values(S.done[SEL]).every(x=>x.ok)&&S.perfect>0)S.perfect--;S.days=S.days.filter(d=>d!==SEL);S.workouts=Math.max(0,S.workouts-1)}
   S.draft[SEL]=S.draft[SEL]||{};S.draft[SEL][i]=res.sets?res.sets.map(q=>({r:q.r,w:q.w})):[{},{},{}];
-  delete S.done[SEL][i];save();home();toast(res.pre?"Valores recuperados. Corrige y vuelve a registrar ✅":"Ejercicio reabierto ✅")})}
+  delete S.done[SEL][i];syncDays();save();home();toast(res.pre?"Valores recuperados. Corrige y vuelve a registrar ✅":"Ejercicio reabierto ✅")})}
 // ---------- calculadora visual de discos
 let PBAR=20;
 const PLT=[[25,"#ff453a",14,100],[20,"#0a84ff",14,94],[15,"#ffd60a",12,84],[10,"#30d158",10,70],[5,"#e8e8ee",8,52],[2.5,"#55555c",6,40],[1.25,"#aeb2bd",5,32]];
@@ -666,8 +701,8 @@ function log(i){
  const sm=`📊 ${bw?tot+" reps hechas":"Volumen: "+Math.round(vol)+" kg de "+Math.round(exp)+" previstos"}.<br>🎯 <b>Próxima sesión:</b> `+(DLm?`${tg} (tu objetivo base, sin cambios).`:allOk?`${tg}. ${bw?"Si mantienes el ritmo, en 4 sesiones: "+(t.reps+3)+" reps.":"Sumas 1 rep por sesión; al llegar a 3 × "+rng(n)[1]+" subirás "+inc(n)+" kg (en unas "+Math.max(1,rng(n)[1]-t.reps+1)+" sesiones)."}`:pct>=.8?`${tg}, completando todas las series. Si lo consigues, sumas 1 rep la próxima vez.`:`${tg}${bw?" con descansos más largos":" (carga reducida)"} para recuperar la técnica y volver a progresar.`);
  S.done[SEL]=S.done[SEL]||{};S.done[SEL][i]={sm,c,m,ok:allOk,dl:DLm,kg:bw?0:vol,reps:sets.reduce((x,q)=>x+q.r,0),n,sets,pre,hp:hp0?hp0.w:null,hr:hp0?hp0.rm:null,pr:isPR,rm:rm1};
  let msg="";
- if(full(SEL)&&!S.days.includes(SEL)){
-  S.days.push(SEL);S.workouts++;
+ if(full(SEL)&&(!S.days.includes(SEL)||(S.rdone||[]).includes(SEL))){
+  {const rd=(S.rdone||[]).includes(SEL);S.rdone=(S.rdone||[]).filter(x=>x!==SEL);if(!rd){S.days.push(SEL);S.workouts++}}
   if(Object.values(S.done[SEL]).every(x=>x.ok))S.perfect++;
   const nb=[];BADGES.forEach(([ic,nm,f])=>{if(f(S)&&!S.badges.includes(nm)){S.badges.push(nm);nb.push(ic+" "+nm)}});
   msg="¡Sesión completada! 🔥 Racha: "+streak(S)+(nb.length?"\nNuevo logro: "+nb.join(", "):"");
@@ -1238,7 +1273,7 @@ function scanStop(){clearInterval(SC.tm);SC.tm=null;if(SC.stream){SC.stream.getT
 function scanClose(){scanStop();SC.look=false;if(SC.o){SC.o.remove();SC.o=null}}
 const scM=t=>{const m=SC.o&&SC.o.querySelector("#scm");if(m)m.textContent=t};
 function scanOpen(){scanClose();const o=document.createElement("div");SC.o=o;o.style.cssText="position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;z-index:99;padding:20px";
- o.innerHTML='<div class="card" id="scc" style="max-width:380px;width:100%;max-height:88vh;overflow:auto"><b style="font-size:19px">📷 Escanear código de barras</b><p class="mu" id="scm" style="font-size:13px;margin:6px 0 8px">Apunta al código EAN del envase.</p><div id="scv" style="width:100%;height:220px;border-radius:14px;overflow:hidden;background:#000"></div><button class="s" id="scr" style="display:none">Reintentar cámara</button><div class="rg"><input id="ean" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="O escribe el código" maxlength="14"><button style="margin:0" id="eanb">Buscar</button></div><button class="s" id="scx" style="margin-top:10px">Cerrar</button></div>';
+ o.innerHTML='<div class="card" id="scc" style="max-width:460px;width:100%;max-height:94vh;overflow:auto"><b style="font-size:19px">📷 Escanear código de barras</b><p class="mu" id="scm" style="font-size:13px;margin:6px 0 8px">Apunta al código EAN del envase.</p><div id="scv" style="width:100%;height:min(62vh,460px);min-height:280px;border-radius:14px;overflow:hidden;background:#000"></div><button class="s" id="scr" style="display:none">Reintentar cámara</button><div class="rg"><input id="ean" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="O escribe el código" maxlength="14"><button style="margin:0" id="eanb">Buscar</button></div><button class="s" id="scx" style="margin-top:10px">Cerrar</button></div>';
  document.body.appendChild(o);const g=q=>o.querySelector(q);g("#scx").onclick=scanClose;g("#eanb").onclick=()=>scanLookup(g("#ean").value);g("#ean").onkeydown=e=>{if(e.key==="Enter")scanLookup(g("#ean").value)};
  g("#scr").onclick=()=>{g("#scr").style.display="none";g("#scv").style.display="block";g("#scv").innerHTML="";SC.look=false;scanStart()};scanStart()}
 async function scanNative(box){if(!(window.BarcodeDetector&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))return false;
@@ -1249,7 +1284,7 @@ async function scanNative(box){if(!(window.BarcodeDetector&&navigator.mediaDevic
  catch(e){scanStop();return false}}
 async function scanStart(){const box=SC.o&&SC.o.querySelector("#scv");if(!box)return;
  if(await scanNative(box))return;if(!SC.o)return;
- try{const Q=await loadQR();if(!SC.o)return;box.innerHTML="";const h=new Q("scv");SC.h5=h;await h.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:130}},t=>scanLookup(t),()=>{})}
+ try{const Q=await loadQR();if(!SC.o)return;box.innerHTML="";const h=new Q("scv");SC.h5=h;await h.start({facingMode:"environment"},{fps:10,qrbox:(vw,vh)=>({width:Math.floor(vw*.88),height:Math.floor(Math.min(vh*.5,vw*.5))})},t=>scanLookup(t),()=>{})}
  catch(e){scanStop();box.style.display="none";scM("No puedo usar la cámara aquí. Escribe el código de barras.")}}
 async function scanLookup(code){code=String(code||"").replace(/\D/g,"");if(code.length<8||code.length>14)return toast("Código de barras no válido.");if(SC.look)return;SC.look=true;scanStop();scM("Buscando "+code+"…");
  const fail=t=>{SC.look=false;scM(t);const r=SC.o&&SC.o.querySelector("#scr");if(r)r.style.display="block"};
@@ -1359,7 +1394,7 @@ function wAdd(){const v=num(document.getElementById("wq").value);if(!(v>=25&&v<=
 function menuTog(e){e.stopPropagation();const m=document.getElementById("mnu");if(!m)return;const on=!m.classList.contains("on");m.classList.toggle("on",on);if(on)setTimeout(()=>document.addEventListener("click",()=>{const x=document.getElementById("mnu");if(x)x.classList.remove("on")},{once:true}),0)}
 function menuGo(){go("me");setTimeout(()=>{const b=document.getElementById("bkf");if(b&&b.parentNode)b.parentNode.scrollIntoView({behavior:"smooth",block:"center"})},60)}
 function calWidget(){const td=ds(new Date()),now=new Date(),mon=mondayOf(now);
- const cells=[0,1,2,3,4,5,6].map(j=>{const dt=new Date(mon);dt.setDate(mon.getDate()+j);const k=ds(dt),w=isTr(dt),dn=S.days.includes(k),ms=w&&!dn&&k<td&&k>=startK();return `<div class="cwd"><span class="h">${"LMXJVSD"[j]}</span><button tabindex="-1" class="${dn?"d":ms?"m":""} ${k===td?"t":""} ${w?"":"w"} ${S.runs[k]?"r":""}">${dn?"✓":dt.getDate()}</button></div>`}).join("");
+ const cells=[0,1,2,3,4,5,6].map(j=>{const dt=new Date(mon);dt.setDate(mon.getDate()+j);const k=ds(dt),w=isTr(dt),dn=S.days.includes(k),ms=w&&!dn&&k<td&&k>=startK();return `<div class="cwd"><span class="h">${"LMXJVSD"[j]}</span><button tabindex="-1" class="${dn?"d":ms?"m":""} ${k===td?"t":""} ${w?"":"w"} ${S.runs[k]?"r":""}">${dn?(S.runs[k]&&!(S.done[k]&&Object.keys(S.done[k]).length)?"🏃":"✓"):dt.getDate()}</button></div>`}).join("");
  return `<div class="card rv" data-rk="calw" role="button" onclick="go('cal')" style="cursor:pointer;padding:14px 16px;margin:12px 0 14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:16px;text-transform:capitalize">📅 ${now.toLocaleDateString("es-ES",{month:"long"})}</b><span class="mu" style="font-size:13px">🔥 ${streak(S)} · Ver calendario ›</span></div><div class="cal">${cells}</div></div>`}
 function habCard(){const H=S.habits||[],dn=H.filter(h=>hDone(h.id)).length;
  return `<div class="card rv" data-rk="habw" role="button" onclick="go('habits')" style="cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17px">✅ Hábitos de hoy</b><span class="pill">${dn}/${H.length}</span></div>${H.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${H.map(h=>{const d=hDone(h.id);return `<span style="display:inline-flex;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;font-size:21px;background:${d?"#34ff7226":"var(--fill)"};box-shadow:${d?"0 0 0 2px #34ff72 inset":"none"};opacity:${d?1:.55}">${h.e||"•"}</span>`}).join("")}</div>`:`<p class="mu" style="font-size:13px;margin:6px 0 0">Crea tu primer hábito.</p>`}</div>`}
@@ -1481,10 +1516,11 @@ function routeSvg(rt,k){const lat0=rt.reduce((a,p)=>a+p[0],0)/rt.length,kx=Math.
  const mnx=Math.min(...xs),mxx=Math.max(...xs),mny=Math.min(...ys),mxy=Math.max(...ys),W=320,H=200,pd=24,sc=Math.min((W-2*pd)/Math.max(mxx-mnx,1e-9),(H-2*pd)/Math.max(mxy-mny,1e-9)),ox=(W-(mxx-mnx)*sc)/2,oy=(H-(mxy-mny)*sc)/2;
  const pt=rt.map((p,i)=>[(xs[i]-mnx)*sc+ox,(ys[i]-mny)*sc+oy]),d="M"+pt.map(q=>q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" L"),a=pt[0],b=pt[pt.length-1];
  const g=[1,2,3,4,5,6,7].map(i=>`<line x1="${i*W/8}" y1="0" x2="${i*W/8}" y2="${H}"/>`).join("")+[1,2,3,4].map(i=>`<line x1="0" y1="${i*H/5}" x2="${W}" y2="${i*H/5}"/>`).join("");
- return `<svg class="rs" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Ruta de la actividad"><defs><linearGradient id="rg${k}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="${H}"><stop offset="0" stop-color="#6f93b0"/><stop offset="1" stop-color="#d4506f"/></linearGradient></defs>
- <g stroke="var(--mu)" stroke-opacity=".13" stroke-width="1">${g}</g>
+ const gr=Array.from({length:33},(_,i)=>`<line x1="${-480+i*20}" y1="-400" x2="${-480+i*20}" y2="600"/>`).join("")+Array.from({length:51},(_,i)=>`<line x1="-500" y1="${-400+i*20}" x2="820" y2="${-400+i*20}"/>`).join(""),bg=`<rect x="-500" y="-400" width="1320" height="1000" fill="url(#bg${k})"/><g stroke="#9a9ea8" stroke-opacity=".09" stroke-width="1">${gr}</g>`;
+ return `<svg class="rs" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Ruta de la actividad"><defs><linearGradient id="bg${k}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="${H}"><stop offset="0" stop-color="#16161a"/><stop offset="1" stop-color="#202026"/></linearGradient><linearGradient id="rg${k}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="${H}"><stop offset="0" stop-color="#8fc0e8"/><stop offset="1" stop-color="#ff6b8e"/></linearGradient><filter id="gl${k}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+ ${bg}
  <path d="${d}" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
- <path class="rline" d="${d}" pathLength="1" fill="none" stroke="url(#rg${k})" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+ <path class="rline" d="${d}" pathLength="1" fill="none" stroke="url(#rg${k})" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#gl${k})" style="filter:drop-shadow(0 0 5px #ff6b8e99)"/>
  <circle cx="${a[0].toFixed(1)}" cy="${a[1].toFixed(1)}" r="6" fill="#30d158" stroke="#fff" stroke-width="2"/><circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="6" fill="#ff453a" stroke="#fff" stroke-width="2"/></svg>`}
 function actCard(r,j,ach){const dt=at(r.d),h=r.t?+r.t.slice(0,2):null,part=h===null?"":h<12?"por la mañana":h<19?"por la tarde":"por la noche";
  const title=r.nm||("Carrera"+(part?" "+part:"")),meta=[relDay(dt)+(r.t?" a las "+r.t:""),"Importada"].join(" · ");
@@ -1502,14 +1538,14 @@ async function attachRouteFile(f){const r=ACTL[RTI];if(!f||!r)return;try{const n
  if(!src)return toast("No he encontrado ruta GPS en ese archivo. Usa un .gpx, .fit o .tcx de la actividad.");
  r.rt=src.rt;["nm","de","el"].forEach(k=>{if(r[k]==null&&src[k]!=null)r[k]=src[k]});save();runPage();toast("Ruta añadida ✅")}catch(e){toast("No he podido leer ese archivo.")}}
 function loadLeaflet(){if(window.L&&window.L.map)return Promise.resolve(window.L);if(LFP)return LFP;
- LFP=new Promise((ok,no)=>{if(!document.getElementById("lfcss")){const lk=document.createElement("link");lk.id="lfcss";lk.rel="stylesheet";lk.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css";document.head.appendChild(lk)}const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";sc.onload=()=>window.L?ok(window.L):no();sc.onerror=()=>no();document.head.appendChild(sc);setTimeout(no,8000)}).catch(e=>{LFP=null;throw e});return LFP}
+ LFP=new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";sc.onload=()=>window.L?ok(window.L):no();sc.onerror=()=>no();document.head.appendChild(sc);setTimeout(no,8000)}).catch(e=>{LFP=null;throw e});return LFP}
 async function upgradeMaps(){const els=[...document.querySelectorAll(".smapw[data-i]")];if(!els.length)return;let L;try{L=await loadLeaflet()}catch(e){return}
  els.forEach(w=>{if(w.dataset.l||!document.body.contains(w))return;const r=ACTL[+w.dataset.i];if(!r||!r.rt)return;w.dataset.l=1;
   try{const map=L.map(w.querySelector(".smap"),{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false,boxZoom:false,keyboard:false,tap:false});
-   const tl=L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19});tl.on("tileload",()=>{if(w.classList.contains("tiles"))return;w.classList.add("tiles");w.insertAdjacentHTML("beforeend",'<span class="att">© OpenStreetMap · CARTO</span>');setTimeout(()=>{const sv=w.querySelector("svg.rs");if(sv)sv.remove()},600)});tl.addTo(map);
+   const tl=L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{maxZoom:19});tl.on("tileload",()=>{if(w.classList.contains("tiles"))return;w.classList.add("tiles");w.insertAdjacentHTML("beforeend",'<span class="att">© OpenStreetMap · CARTO</span>') });tl.addTo(map);
    const col=(getComputedStyle(document.documentElement).getPropertyValue("--ac")||"").trim()||"#d4506f",pl=L.polyline(r.rt,{color:col,weight:4,opacity:.95,lineJoin:"round",lineCap:"round"}).addTo(map);
    L.circleMarker(r.rt[0],{radius:5,color:"#fff",weight:2,fillColor:"#30d158",fillOpacity:1}).addTo(map);L.circleMarker(r.rt[r.rt.length-1],{radius:5,color:"#fff",weight:2,fillColor:"#ff453a",fillOpacity:1}).addTo(map);
-   map.fitBounds(pl.getBounds(),{padding:[18,18]});setTimeout(()=>{try{map.invalidateSize()}catch(e){}},250);}catch(e){}})}
+   map.invalidateSize();map.fitBounds(pl.getBounds(),{padding:[22,22]});setTimeout(()=>{try{map.invalidateSize();map.fitBounds(pl.getBounds(),{padding:[22,22]})}catch(e){}},300);}catch(e){}})}
 // ---------- días de correr personalizables (rodaje, calidad, tirada larga)
 const RDAYS=()=>(S.rdays&&S.rdays.length===3)?S.rdays:[2,4,6];
 const DNS=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
@@ -1534,8 +1570,12 @@ function recalibrate(){const R=S.stravaRuns||[],now=new Date(),lim=new Date(now)
  S.cal={n:rec.length,km4:Math.round(km),weekly:Math.round(weekly*10)/10,lr:Math.round(lr*10)/10,pace:pf(avg),p5,w0,fbase,fref,b};return S.cal}
 // ---------- perfil "Solo correr": rachas y días a partir de las carreras
 function sortRuns(){if(S.stravaRuns)S.stravaRuns.sort((a,b)=>(a.d+(a.t||"")).localeCompare(b.d+(b.t||"")))}
-function syncDays(){if(!S||S.sport!=="run")return;S.days=[...new Set(Object.keys(S.runs).filter(k=>S.runs[k]))].sort();S.workouts=S.days.length;
- BADGES.forEach(([ic,nm,f])=>{try{if(f(S)&&!S.badges.includes(nm))S.badges.push(nm)}catch(e){}})}
+function syncDays(){if(!S)return;S.runs=S.runs||{};const ks=Object.keys(S.runs).filter(k=>S.runs[k]).sort();
+ if(S.sport==="run"){S.days=[...new Set(ks)].sort();S.workouts=S.days.length}
+ else{S.days=S.days||[];S.rdone=(S.rdone||[]).filter(k=>{if(S.runs[k])return true;if(S.days.includes(k)){S.days=S.days.filter(x=>x!==k);S.workouts=Math.max(0,S.workouts-1)}return false});
+  ks.forEach(k=>{if(!S.days.includes(k)){S.days.push(k);S.rdone.push(k);S.workouts++}});S.days.sort()}
+ if(ks.length&&(!S.start||ks[0]<S.start))S.start=ks[0];
+ awardCheck()}
 function runCardLobby(td){const rn=runFor(td);return `<div class="card rv" data-rk="routine" onclick="go('run')" style="cursor:pointer"><b style="font-size:19px">${rn?"Salida de hoy · "+rn.t:"Hoy descansas 🌿"}</b>${rn?`<p class="mu" style="margin:6px 0 0;line-height:1.45">${rn.d}</p><button>Ir a Correr</button>`:`<p class="mu">Hoy no toca correr. Tu racha no se rompe.</p>`}</div>`}
 // ---------- pulsación larga en FitQuest -> píldora -> Habit Tracker
 let LPT=null,LPF=false,LPD=null;
@@ -1579,10 +1619,11 @@ function hUp(e){if(!HD)return;const d=HD;hReset();if(d.drag){const done=hDone(d.
 // ---------- puente: carreras importadas -> S.runs (✓ en Correr, punto en el calendario, estadísticas)
 function syncImported(){
  const R=S.stravaRuns||[];Object.keys(S.runs).forEach(k=>{if(S.runs[k]&&S.runs[k].src==="imp")delete S.runs[k]});
- const lim=new Date();lim.setDate(lim.getDate()-28);const lk=ds(lim),nk=ds(new Date()),by={};let n=0;
+ const by={};let n=0;
+ if(!S.rs&&R.length){try{recalibrate()}catch(e){}if(!S.rs)S.rs=ds(mondayOf(new Date()))}
  R.forEach(r=>{(by[r.d]=by[r.d]||[]).push(r)});
  Object.keys(by).forEach(k=>{if(S.runs[k])return;
-  const plan=runFor(k),recent=k>=lk&&k<=nk;if(!plan&&!recent)return;
+  const plan=runFor(k);
   const km=Math.round(by[k].reduce((a,r)=>a+r.km,0)*100)/100,mn=Math.round(by[k].reduce((a,r)=>a+r.min,0)*10)/10,pace=km&&mn?" · ritmo "+pf(mn/km)+" min/km":"";
   let c="ok",m="✅ Carrera importada";
   if(plan){const v=plan.km?km:mn,ratio=v/(plan.km||plan.min);
@@ -1643,12 +1684,12 @@ function statsPage(){
  const rec=[cd("🏅 "+st.best,"Mejor racha (días)")];
  if(hasRun()){if(ra.best)rec.push(cd("⚡ "+pf(ra.best)+"/km","Ritmo más rápido · "+fd(ra.bestD)));if(ra.lg)rec.push(cd("🛣️ "+ra.lg+" km","Tirada más larga · "+fd(ra.lgD)));if(ra.wk)rec.push(cd("📈 "+ra.wk.toFixed(1)+" km","Semana con más km"))}
  if(S.sport!=="run"&&bx)rec.push(cd("🏋️ "+bx.rm+" kg","Mayor 1RM est. · "+bx.n));
- const sec=(t,c)=>{const L=BADGES.filter(x=>x[4]===c&&(c!=="f"||S.sport!=="run")&&(c!=="r"||hasRun()));if(!L.length)return"";return `<h3 style="margin:14px 0 8px;font-size:15px;color:var(--mu)">${t}</h3><div class="ach">${L.map(([i,n,,d])=>`<div class="${S.badges.includes(n)?"":"off"}"><i>${S.badges.includes(n)?i:"🔒"}</i><p style="margin:0"><b>${n}</b><span>${d}</span></p></div>`).join("")}</div>`};
- const vis=BADGES.filter(x=>(x[4]!=="f"||S.sport!=="run")&&(x[4]!=="r"||hasRun())),got=vis.filter(x=>S.badges.includes(x[1])).length;
+ const sec=(t,c)=>{const L=BADGES.filter(x=>x[4]===c&&(c!=="f"||S.sport!=="run")&&(c!=="r"||hasRun())&&(c!=="p"||hasPool()));if(!L.length)return"";return `<h3 style="margin:14px 0 8px;font-size:15px;color:var(--mu)">${t}</h3><div class="ach">${L.map(([i,n,,d])=>`<div class="${S.badges.includes(n)?"":"off"}"><i>${S.badges.includes(n)?i:"🔒"}</i><p style="margin:0"><b>${n}</b><span>${d}</span></p></div>`).join("")}</div>`};
+ const vis=BADGES.filter(x=>(x[4]!=="f"||S.sport!=="run")&&(x[4]!=="r"||hasRun())&&(x[4]!=="p"||hasPool())),got=vis.filter(x=>S.badges.includes(x[1])).length;
  $(`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button class="s" style="width:auto;margin:0;padding:8px 14px" onclick="go('lobby')">‹ FitQuest</button><button class="s" style="width:auto;margin:0;padding:8px 14px" onclick="go('cal')">📅 Calendario ›</button></div><h1>Estadísticas</h1>
  <div class="st">${cd("🔥 "+streak(S),"Racha actual")}${cd(S.workouts,"Sesiones completas")}${cd(st.pct+"%","Cumplimiento")}${cd(st.miss,"Días fallados")}${S.sport==="run"?"":cd(st.ep+"%","Ejercicios cumplidos")}${S.sport==="run"?"":cd(st.kg.toLocaleString("es-ES")+" kg","Peso total levantado")}${S.sport==="run"?"":cd(st.reps.toLocaleString("es-ES"),"Repeticiones totales")}${hasRun()?cd(Object.keys(S.runs).length,"Carreras hechas"):""}${cd(Object.values(S.runs).reduce((a,r)=>a+(r.km||0),0).toFixed(1)+" km","Km corridos")}${hasRun()?cd(runStats().pace,"Ritmo medio"):""}${hasPool()?cd(nf(Object.values(S.swims).reduce((a,r)=>a+(r.m||0),0))+" m","Metros nadados")+cd(Object.keys(S.swims).length,"Sesiones de piscina"):""}${S.sg?cd(stepStats().days,"Metas de pasos")+cd(stepStats().avg.toLocaleString("es-ES"),"Pasos medios (7 d)"):""}</div>
  <h2>Récords personales</h2><div class="st">${rec.join("")}</div>
- <h2>Logros <span class="mu" style="font-size:15px;font-weight:600">${got}/${vis.length}</span></h2>${sec("Constancia","g")}${sec("Fuerza","f")}${sec("Correr","r")}
+ <h2>Logros <span class="mu" style="font-size:15px;font-weight:600">${got}/${vis.length}</span></h2>${sec("Constancia","g")}${sec("Fuerza","f")}${sec("Correr","r")}${sec("Piscina","p")}
  ${S.sport==="run"?"":`<h2>Progresión de pesos</h2><div class="card">${prog()}</div>`}
  <h2>Datos curiosos</h2><div class="card">${fun().map(t=>`<p style="margin:8px 0;line-height:1.4">${t}</p>`).join("")}</div>
  <h2>Sesiones por semana</h2><div class="card"><div class="bars">${wks.map(([c,l])=>`<div><i style="height:${c/DPW()*70}px"></i>${c}/${DPW()}<br>${l}</div>`).join("")}</div></div>`);
